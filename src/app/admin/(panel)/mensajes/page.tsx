@@ -99,7 +99,11 @@ function MessageCard({ message: m, businessName }: { message: ContactRequest; bu
         </div>
         <Badge tone={meta.tone}>{meta.label}</Badge>
       </div>
-      <p className="whitespace-pre-line">{m.message}</p>
+      {m.message ? (
+        <p className="whitespace-pre-line">{m.message}</p>
+      ) : (
+        <p className="text-muted">Sin mensaje. Llegó desde el formulario rápido de la portada.</p>
+      )}
       <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
         <a
           href={whatsappLink(m.phone, reply)}

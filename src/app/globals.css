@@ -318,3 +318,62 @@
     opacity: 1;
   }
 }
+
+/*
+ * Entry dialog (native <dialog>, top layer). It rises into place and its scrim
+ * fades in; closing runs the same path backwards. Browsers without
+ * @starting-style simply show and hide it. A plain rule on purpose: written as
+ * an @utility, this block was not emitted into the stylesheet.
+ */
+@layer components {
+  .rise-dialog {
+    opacity: 0;
+    transform: translateY(1.75rem) scale(0.97);
+    transition:
+      opacity 0.3s ease,
+      transform 0.55s var(--ease-out-expo),
+      overlay 0.55s allow-discrete,
+      display 0.55s allow-discrete;
+
+    &[open] {
+      opacity: 1;
+      transform: none;
+
+      @starting-style {
+        opacity: 0;
+        transform: translateY(1.75rem) scale(0.97);
+      }
+    }
+
+    &::backdrop {
+      background: rgb(22 23 26 / 0);
+      backdrop-filter: blur(0);
+      transition:
+        background-color 0.4s ease,
+        backdrop-filter 0.4s ease,
+        overlay 0.4s allow-discrete,
+        display 0.4s allow-discrete;
+    }
+
+    &[open]::backdrop {
+      background: rgb(22 23 26 / 0.42);
+      backdrop-filter: blur(6px);
+
+      @starting-style {
+        background: rgb(22 23 26 / 0);
+        backdrop-filter: blur(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transform: none;
+      transition-duration: 0.2s;
+
+      &[open] {
+        @starting-style {
+          transform: none;
+        }
+      }
+    }
+  }
+}

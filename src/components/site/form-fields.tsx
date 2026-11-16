@@ -175,15 +175,28 @@ export function Honeypot() {
   );
 }
 
-export function SubmitButton({ pending, children }: { pending: boolean; children: ReactNode }) {
+const submitTone = {
+  ink: "bg-ink text-paper hover:bg-night-soft",
+  gold: "bg-gold text-ink hover:bg-gold-bright",
+} as const;
+
+export function SubmitButton({
+  pending,
+  tone = "ink",
+  children,
+}: {
+  pending: boolean;
+  tone?: keyof typeof submitTone;
+  children: ReactNode;
+}) {
   return (
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-full bg-ink px-7 text-[1.0625rem] font-semibold text-paper shadow-lift transition-[transform,background-color,opacity] duration-150 ease-out hover:bg-night-soft active:scale-[0.97] disabled:opacity-70"
+      className={`inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-full px-7 text-[1.0625rem] font-semibold shadow-lift transition-[transform,background-color,opacity] duration-150 ease-out active:scale-[0.97] disabled:opacity-70 ${submitTone[tone]}`}
     >
       {pending ? (
-        <span aria-hidden className="size-5 animate-spin rounded-full border-2 border-paper/30 border-t-paper" />
+        <span aria-hidden className="size-5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
       ) : null}
       {pending ? "Enviando…" : children}
     </button>

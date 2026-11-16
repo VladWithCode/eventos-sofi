@@ -8,6 +8,7 @@ import { FaqList } from "@/components/site/faq";
 import { formatPhone, whatsappHref } from "@/components/site/format";
 import { Gallery } from "@/components/site/gallery";
 import { Hero } from "@/components/site/hero";
+import { LeadPrompt } from "@/components/site/lead-prompt";
 import { SparkIcon } from "@/components/site/icons";
 import { ContactLink, PrimaryCta, WhatsAppCta } from "@/components/site/links";
 import { ProcessTimeline } from "@/components/site/process";
@@ -177,6 +178,7 @@ export default async function HomePage() {
       ) : null}
 
       <Contact settings={settings} whatsappUrl={whatsappUrl} />
+      <LeadPrompt />
     </>
   );
 }

@@ -67,6 +67,12 @@ const contactSchema = z.object({
   consent,
 });
 
+const quickLeadSchema = z.object({
+  name,
+  phone,
+  message: z.string().trim().max(500, { error: "El mensaje no puede pasar de 500 caracteres." }),
+});
+
 const RATE_LIMITED: FormState = {
   status: "error",
   message: "Recibimos varias solicitudes seguidas desde tu conexión. Intenta de nuevo en unos minutos o escríbenos por WhatsApp.",
@@ -121,6 +127,40 @@ export async function submitBooking(_prev: FormState, formData: FormData): Promi
   }
 }
 
+type ContactInput = { name: string; phone: string; message: string };
+
+/** Shared tail of the contact actions: rate limit, store, then mirror the event to Meta. */
+async function storeContact(
+  formData: FormData,
+  eventId: string,
+  data: ContactInput,
+  meta: { name: "Lead" | "Contact"; customData: Record<string, string> },
+): Promise<FormState> {
+  const request = await getRequestContext();
+  if (!rateLimit(`form:${request.ip}`, LIMIT, WINDOW_MS)) return RATE_LIMITED;
+
+  const attribution = parseAttribution(formData.get("attribution"));
+  insertContact({ ...data, metaEventId: eventId, attribution });
+
+  after(() =>
+    sendCapiEvent({
+      name: meta.name,
+      eventId,
+      sourceUrl: attribution.landingUrl || request.referer,
+      request,
+      user: { name: data.name, phone: data.phone },
+      fbclid: attribution.fbclid,
+      customData: meta.customData,
+    }),
+  );
+  return { status: "success", eventId };
+}
+
+const CONTACT_FAILED: FormState = {
+  status: "error",
+  message: "No pudimos enviar tu mensaje. Intenta de nuevo o escríbenos por WhatsApp.",
+};
+
 export async function submitContact(_prev: FormState, formData: FormData): Promise<FormState> {
   const eventId = eventIdFrom(formData);
   try {
@@ -129,30 +169,36 @@ export async function submitContact(_prev: FormState, formData: FormData): Promi
     const parsed = contactSchema.safeParse(formFields(formData, ["name", "phone", "message", "consent"]));
     if (!parsed.success) return invalid(parsed.error);
 
-    const request = await getRequestContext();
-    if (!rateLimit(`form:${request.ip}`, LIMIT, WINDOW_MS)) return RATE_LIMITED;
-
-    const data = parsed.data;
-    const attribution = parseAttribution(formData.get("attribution"));
-    insertContact({ ...data, metaEventId: eventId, attribution });
-
-    after(() =>
-      sendCapiEvent({
-        name: "Contact",
-        eventId,
-        sourceUrl: attribution.landingUrl || request.referer,
-        request,
-        user: { name: data.name, phone: data.phone },
-        fbclid: attribution.fbclid,
-        customData: { method: "form" },
-      }),
-    );
-    return { status: "success", eventId };
+    const { name, phone, message } = parsed.data;
+    return await storeContact(formData, eventId, { name, phone, message }, {
+      name: "Contact",
+      customData: { method: "form" },
+    });
   } catch (error) {
     console.error("[submitContact] failed:", error instanceof Error ? error.message : error);
-    return {
-      status: "error",
-      message: "No pudimos enviar tu mensaje. Intenta de nuevo o escríbenos por WhatsApp.",
-    };
+    return CONTACT_FAILED;
+  }
+}
+
+/**
+ * Entry prompt on the landing page: name and phone only, message optional.
+ * There is no consent checkbox; the form states that sending it accepts the
+ * privacy notice. Counted as a Lead because it is the page's fastest conversion.
+ */
+export async function submitQuickLead(_prev: FormState, formData: FormData): Promise<FormState> {
+  const eventId = eventIdFrom(formData);
+  try {
+    if (isBot(formData)) return { status: "success", eventId };
+
+    const parsed = quickLeadSchema.safeParse(formFields(formData, ["name", "phone", "message"]));
+    if (!parsed.success) return invalid(parsed.error);
+
+    return await storeContact(formData, eventId, parsed.data, {
+      name: "Lead",
+      customData: { content_category: "quick-contact" },
+    });
+  } catch (error) {
+    console.error("[submitQuickLead] failed:", error instanceof Error ? error.message : error);
+    return CONTACT_FAILED;
   }
 }
