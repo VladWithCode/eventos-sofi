@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Self-contained server bundle (.next/standalone): the VPS needs no dependency install.
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   images: {

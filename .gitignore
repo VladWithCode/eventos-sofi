@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local database and uploads
 /data
+
+# deploy settings with server address and secrets
+/deploy/*.env
