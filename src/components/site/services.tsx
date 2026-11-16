@@ -70,15 +70,20 @@ function ServiceCard({
             {String(index + 1).padStart(2, "0")}
             <span className="text-muted not-italic"> / {String(total).padStart(2, "0")}</span>
           </p>
-          {/* Small arch on phones, where the full frame would push the card past the fold. */}
-          <ArtFrame
-            image={service.image}
-            tone={TONES[index % TONES.length]}
-            sizes="4rem"
-            className="arch absolute top-5 right-5 aspect-[3/4] w-16 sm:top-8 sm:right-8 lg:hidden"
-          />
+          {/*
+            Small arch on phones, where the full frame would push the card past the fold.
+            The wrapper owns the position: ArtFrame is `relative` for its own image layer.
+          */}
+          <div className="absolute top-5 right-5 w-[4.5rem] sm:top-8 sm:right-8 sm:w-24 lg:hidden">
+            <ArtFrame
+              image={service.image}
+              tone={TONES[index % TONES.length]}
+              sizes="6rem"
+              className="arch aspect-[3/4]"
+            />
+          </div>
 
-          <h3 className="display-lg mt-5 pr-20 lg:mt-7 lg:pr-0">{service.title}</h3>
+          <h3 className="display-lg mt-5 pr-[5.5rem] sm:pr-28 lg:mt-7 lg:pr-0">{service.title}</h3>
           <p className="lede mt-3 max-w-[34rem] text-ink-soft lg:mt-5">{service.summary}</p>
 
           <ul className="mt-6 grid gap-x-8 gap-y-2.5 sm:grid-cols-2 lg:mt-8">
