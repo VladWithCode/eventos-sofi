@@ -74,18 +74,32 @@ JavaScript loads; everything honors `prefers-reduced-motion`.
 - `src/app/media/[file]` – serves uploaded images from `./data/uploads`.
 - `src/app/api/meta/contact` – server mirror of Pixel `Contact` clicks.
 
-## Deploying (single VPS)
+## Deploying (VPS with nginx + pm2)
 
-1. `pnpm install --frozen-lockfile && pnpm build`
-2. Run `pnpm start` under a process manager (systemd, pm2) with the env variables set.
-3. Put a reverse proxy (Caddy, Nginx) in front with HTTPS. It must set
-   `X-Forwarded-For` / `X-Real-IP` (and overwrite client-sent values): rate limits
-   and Meta matching use them. The session cookie is `Secure` in production, so the
-   admin only works over HTTPS.
-4. Back up the whole `data/` directory (database + uploads). Use
-   `sqlite3 data/sofi.db ".backup backup.db"` for a consistent copy while running.
+`deploy/vps.sh` builds the standalone bundle on this machine and runs it on the
+server with pm2. The server needs only Node 24+ and pm2: no `pnpm install`, no
+build. Both machines must share a CPU architecture (the bundle carries sharp's
+native binary).
 
-`next build` prerenders the public content, so it opens (and if needed creates)
-the database at build time. Build on the server, or point `DATABASE_PATH` at the
-real database during the build. Rate limits are in memory and per process, which
-is fine for one server.
+```bash
+cp deploy/vps.env.example deploy/vps.env   # SSH target, folder, URL, port, admin, Meta keys
+./deploy/vps.sh --code-only                # normal deploy: keeps the server's database and photos
+./deploy/vps.sh                            # also replaces the server's data with ./data (asks first)
+```
+
+On the server, `$DEPLOY_DIR/app` is replaced on every deploy and
+`$DEPLOY_DIR/data` (database + uploads) persists; back that folder up. For a
+consistent copy while the site runs:
+`node -e 'new (require("node:sqlite").DatabaseSync)("data/sofi.db").prepare("VACUUM INTO ?").run("backup.db")'`.
+
+nginx is not configured by the script. The comment at the top of
+`deploy/vps.sh` has the `location` block: proxy to `127.0.0.1:$DEPLOY_PORT`,
+set `X-Forwarded-For` (rate limits and Meta matching use it), allow 15 MB
+bodies for photo uploads, and serve over HTTPS (the admin session cookie is
+`Secure` in production).
+
+Public pages are prerendered at build time from the database and stay that way
+until content is edited in the admin, so the build must read the content the
+server will have. The script handles this: `--code-only` builds against a
+snapshot of the server's database, the full deploy against the local one.
+Rate limits are in memory and per process, which is fine for one server.
